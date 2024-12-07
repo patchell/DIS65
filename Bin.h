@@ -4,11 +4,8 @@ class CBin
 {
 public:
 	enum BinType {
-		ALL,
-		SYMBOL,
-		SECTION,
-		WHERE_USED,
-		UNRESOLVED
+		LABEL,
+		ZEROPAGELABEL,
 	};
 private:
 	CBin* m_pNext;
@@ -17,18 +14,15 @@ private:
 	CBin* m_pTail;
 	char* m_pName;
 	BinType m_Type;
-	Token m_Token;
 	char m_strName[MAX_SYMBOL_NAME_LEN];
 public:
 	CBin() {
 		m_pHead = 0;
 		m_pTail = 0;
-		m_Token = Token(0);
 		m_pNext = 0;
 		m_pPrev = 0;
 		m_pName = new char[MAX_NAME_LEN];
 		m_Type = BinType(0);
-		m_Token = Token(0);
 		for (int i = 0; i < MAX_SYMBOL_NAME_LEN; ++i)
 			m_strName[i] = 0;
 	}
@@ -38,7 +32,6 @@ public:
 		m_pPrev = 0;
 		m_pHead = 0;
 		m_pTail = 0;
-		m_Token = Token::ENDOFTOKENS;
 		m_Type = type;
 		for (int i = 0; i < MAX_SYMBOL_NAME_LEN; ++i)
 			m_strName[i] = 0;
@@ -61,13 +54,6 @@ public:
 	}
 	 virtual bool Compare(const char *name, int aux = 0);
 	 BinType GetType() { return m_Type; }
-	 //	virtual bool Compare(const char* name) {
-//		bool rV = false;
-//		if (strcmp(m_pName, name) == 0) rV = true;
-//		return rV;
-	//}
-	 void SetToken(Token t) { m_Token = t; }
-	 Token GetToken() { return m_Token; }
 	 virtual void Print(FILE* pOut, const char* s = 0);
 	 //------------------------------------------
 	 // SubList Methods

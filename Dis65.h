@@ -2,7 +2,14 @@
 
 class CDis65
 {
-	char* m_BinaryBuffer;
+	unsigned char* m_pBinaryBuffer;
+	int m_BinBuffSize;
+	int m_InFileSize;
+	int m_Index;
+	char* m_pInFile;
+	char* m_pOutFile;
+	FILE* m_pOut;
+	CSymTab m_SymTab;
 public:
 	enum class AdrModes {
 		NONE,
@@ -93,19 +100,19 @@ private:
 		//-----------------------------------------
 		{0x10,"BPL",2,"", AdrModes::RELATIVE},
 		//-----------------------------------------
-		{0x00,"BRK",2,"", AdrModes::IMPLIED},
+		{0x00,"BRK",1,"", AdrModes::IMPLIED},
 		//-----------------------------------------
 		{0x50,"BVC",2,"", AdrModes::RELATIVE},
 		//-----------------------------------------
 		{0x70,"BVS",2,"", AdrModes::RELATIVE},
 		//-----------------------------------------
-		{0x18,"CLC",2,"", AdrModes::IMPLIED},
+		{0x18,"CLC",1,"", AdrModes::IMPLIED},
 		//-----------------------------------------
-		{0xD8,"CLD",2,"", AdrModes::IMPLIED},
+		{0xD8,"CLD",1,"", AdrModes::IMPLIED},
 		//-----------------------------------------
-		{0x58,"CLI",2,"", AdrModes::IMPLIED},
+		{0x58,"CLI",1,"", AdrModes::IMPLIED},
 		//-----------------------------------------
-		{0xB8,"CLV",2,"", AdrModes::IMPLIED},
+		{0xB8,"CLV",1,"", AdrModes::IMPLIED},
 		//-----------------------------------------
 		{0xC9,"CMP",2,"#$%02x", AdrModes::IMMEDIATE},
 		{0xC5,"CMP",2,"", AdrModes::ZERO_PAGE},
@@ -129,9 +136,9 @@ private:
 		{0xCE,"DEC",3,"", AdrModes::ABSOLUTE},
 		{0xDE,"DEC",3,"", AdrModes::ABSOLUTE_X},
 		//-----------------------------------------
-		{0xCA,"DEX",2,"", AdrModes::IMPLIED},
+		{0xCA,"DEX",1,"", AdrModes::IMPLIED},
 		//-----------------------------------------
-		{0x88,"DEY",2,"", AdrModes::IMPLIED},
+		{0x88,"DEY",1,"", AdrModes::IMPLIED},
 		//-----------------------------------------
 		{0x49,"EOR",2,"#$%02x", AdrModes::IMMEDIATE},
 		{0x45,"EOR",2,"", AdrModes::ZERO_PAGE},
@@ -147,9 +154,9 @@ private:
 		{0xEE,"INC",3,"", AdrModes::ABSOLUTE},
 		{0xFE,"INC",3,"", AdrModes::ABSOLUTE_X},
 		//-----------------------------------------
-		{0xE8,"INX",2,"", AdrModes::IMPLIED},
+		{0xE8,"INX",1,"", AdrModes::IMPLIED},
 		//-----------------------------------------
-		{0xC8,"INY",2,"", AdrModes::IMPLIED},
+		{0xC8,"INY",1,"", AdrModes::IMPLIED},
 		//-----------------------------------------
 		{0x4C,"JMP",3,"", AdrModes::ABSOLUTE},
 		{0x6C,"JMP",3,"", AdrModes::INDIRECT},
@@ -183,7 +190,7 @@ private:
 		{0x4E,"LSR",3,"", AdrModes::ABSOLUTE},
 		{0x5E,"LSR",3,"", AdrModes::ABSOLUTE_X},
 		//-----------------------------------------
-		{ 0xEA,"NOP",2,"", AdrModes::IMPLIED },
+		{ 0xEA,"NOP",1,"", AdrModes::IMPLIED },
 		//-----------------------------------------
 		{0x09,"ORA",2,"#$%02x", AdrModes::IMMEDIATE},
 		{0x05,"ORA",2,"", AdrModes::ZERO_PAGE},
@@ -194,13 +201,13 @@ private:
 		{0x01,"ORA",2,"", AdrModes::ZERO_PAGE_INDEXED_INDIRECT_X},
 		{0x11,"ORA",2,"", AdrModes::ZERO_PAGE_INDIRECT_INDEXED_Y},
 		//-----------------------------------------
-		{ 0x48,"PHA",2,"", AdrModes::IMPLIED },
+		{ 0x48,"PHA",1,"", AdrModes::IMPLIED },
 		//-----------------------------------------
-		{ 0x08,"PHP",2,"", AdrModes::IMPLIED },
+		{ 0x08,"PHP",1,"", AdrModes::IMPLIED },
 		//-----------------------------------------
-		{ 0x68,"PLA",2,"", AdrModes::IMPLIED },
+		{ 0x68,"PLA",1,"", AdrModes::IMPLIED },
 		//-----------------------------------------
-		{ 0x28,"PLP",2,"", AdrModes::IMPLIED },
+		{ 0x28,"PLP",1,"", AdrModes::IMPLIED },
 		//-----------------------------------------
 		{0x2A,"ROL",1,"", AdrModes::ACCUMULATOR},
 		{0x26,"ROL",2,"", AdrModes::ZERO_PAGE},
@@ -214,9 +221,9 @@ private:
 		{0x6E,"ROR",3,"", AdrModes::ABSOLUTE},
 		{0x7E,"ROR",3,"", AdrModes::ABSOLUTE_X},
 		//-----------------------------------------
-		{ 0x40,"RTI",2,"", AdrModes::IMPLIED },
+		{ 0x40,"RTI",1,"", AdrModes::IMPLIED },
 		//-----------------------------------------
-		{ 0x60,"RTS",2,"", AdrModes::IMPLIED },
+		{ 0x60,"RTS",1,"", AdrModes::IMPLIED },
 		//-----------------------------------------
 		{0xE9,"SBC",2,"#$%02x", AdrModes::IMMEDIATE},
 		{0xE5,"SBC",2,"", AdrModes::ZERO_PAGE},
@@ -227,11 +234,11 @@ private:
 		{0xE1,"SBC",2,"", AdrModes::ZERO_PAGE_INDEXED_INDIRECT_X},
 		{0xF1,"SBC",2,"", AdrModes::ZERO_PAGE_INDIRECT_INDEXED_Y},
 		//-----------------------------------------
-		{ 0x38,"SEC",2,"", AdrModes::IMPLIED },
+		{ 0x38,"SEC",1,"", AdrModes::IMPLIED },
 		//-----------------------------------------
-		{ 0xF8,"SEC",2,"", AdrModes::IMPLIED },
+		{ 0xF8,"SEC",1,"", AdrModes::IMPLIED },
 		//-----------------------------------------
-		{ 0x78,"SEI",2,"", AdrModes::IMPLIED },
+		{ 0x78,"SEI",1,"", AdrModes::IMPLIED },
 		//-----------------------------------------
 		{0x85,"STA",2,"", AdrModes::ZERO_PAGE},
 		{0x95,"STA",2,"", AdrModes::ZERO_PAGE_X},
@@ -249,23 +256,30 @@ private:
 		{ 0x94,"STY",2,"", AdrModes::ZERO_PAGE_X },
 		{ 0x8C,"STY",3,"", AdrModes::ABSOLUTE },
 		//-----------------------------------------
-		{ 0xAA,"TAX",2,"", AdrModes::IMPLIED },
+		{ 0xAA,"TAX",1,"", AdrModes::IMPLIED },
 		//-----------------------------------------
-		{ 0xA8,"TAY",2,"", AdrModes::IMPLIED },
+		{ 0xA8,"TAY",1,"", AdrModes::IMPLIED },
 		//-----------------------------------------
-		{ 0xBA,"TSX",2,"", AdrModes::IMPLIED },
+		{ 0xBA,"TSX",1,"", AdrModes::IMPLIED },
 		//-----------------------------------------
-		{ 0x8A,"TXA",2,"", AdrModes::IMPLIED },
+		{ 0x8A,"TXA",1,"", AdrModes::IMPLIED },
 		//-----------------------------------------
-		{ 0x9A,"TXS",2,"", AdrModes::IMPLIED },
+		{ 0x9A,"TXS",1,"", AdrModes::IMPLIED },
 		//-----------------------------------------
-		{ 0x98,"TYA",2,"", AdrModes::IMPLIED },
-		{ -1,NULL,2,"", AdrModes::IMPLIED }
+		{ 0x98,"TYA",1,"", AdrModes::IMPLIED },
+		{ -1,NULL,1,"", AdrModes::IMPLIED }
 	};
 public:
 	CDis65();
 	virtual ~CDis65();
-	bool Create();
+	unsigned DisGet();
+	bool Create(int argc, char* argv[]);
+	Opcode* IsThisIt(int c);
+	char* CreateAsmInstruction(char* pBuff, int BuffLen, unsigned op);
 	int Run();
+	unsigned Make16BitWord(unsigned low, unsigned high)
+	{
+		return low + (high << 8);
+	}
 };
 

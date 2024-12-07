@@ -1,0 +1,38 @@
+	STA $a0
+	STX $a1
+	STY $a2
+	CLC
+	PLA
+	STA $84
+	ADC #$03
+	TAY
+	PLA
+	STA $85
+	ADC #$00
+	PHA
+	TYA
+	PHA
+	LDY #$01
+	LDA ($84),Y
+	STA $82
+	INY
+	LDA ($84),Y
+	STA $83
+	INY
+	LDA ($84),Y
+	TAY
+	LDA $00a0,Y
+	STA ($82),Y
+	DEY
+	BPL $f8
+	LDA $11
+	BNE $0f
+	INC $11
+	JMP $7bb7
+	PHP
+	PHP
+	ORA #$11
+	ORA $1318,Y
+	AND ($23,X)
+	AND ($23,X)
+	RTS

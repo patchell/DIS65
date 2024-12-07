@@ -131,6 +131,7 @@
     <ClInclude Include="Bin.h" />
     <ClInclude Include="Bucket.h" />
     <ClInclude Include="Dis65.h" />
+    <ClInclude Include="pch.h" />
     <ClInclude Include="Symbol.h" />
     <ClInclude Include="SymTab.h" />
   </ItemGroup>
@@ -138,6 +139,7 @@
     <ClCompile Include="Bin.cpp" />
     <ClCompile Include="Bucket.cpp" />
     <ClCompile Include="Dis65.cpp" />
+    <ClCompile Include="pch.cpp" />
     <ClCompile Include="Symbol.cpp" />
     <ClCompile Include="SymTab.cpp" />
   </ItemGroup>
