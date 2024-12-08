@@ -3,10 +3,19 @@
 
 class CSymbol: public CBin
 {
+public:
+	enum LabelTyype {
+		DATAl_PAGEZERIO,
+		DATA,
+		JUMP,
+		BRANCH
+	};
+private:
 	inline static int m_LableCount = 0;
 	int m_Address;
 	bool m_bPageZero;
 	bool m_bUnResolved;
+	CSymbol::LabelTyype m_LabelType;
 public:
 	CSymbol() {
 		m_Address = 0;
@@ -29,11 +38,13 @@ public:
 	bool IsResolved() {
 		return !m_bUnResolved;
 	}
+	void SetLableType(CSymbol::LabelTyype Lt) { m_LabelType = Lt; }
+	CSymbol::LabelTyype GetLabelType() { return m_LabelType; }
 	void SetResolved() { m_bUnResolved = false; }
 	void SetUnResolved() { m_bUnResolved = true; }
 	void SetPageZero(bool tf) { m_bPageZero = tf; }
 	bool IsPageZero() { return m_bPageZero; }
 	static int GetLabelCount() { return m_LableCount++; }
-	char* MakeLabel(bool PageZero);
+	char* MakeLabel();
 };
 

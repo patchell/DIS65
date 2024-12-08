@@ -22,9 +22,25 @@ void CSymbol::Print(FILE* pOut, const char* s)
 	//);
 }
 
-char* CSymbol::MakeLabel( bool PageZero)
+char* CSymbol::MakeLabel()
 {
-	m_bPageZero = PageZero;
-	sprintf_s(GetName(), MAX_SYMBOL_NAME_LEN, "%c%06d", PageZero ? 'Z' : 'L', CSymbol::GetLabelCount());
+	int c = 0;
+
+	switch (m_LabelType)
+	{
+	case CSymbol::LabelTyype::BRANCH:
+		c = 'B';
+		break;
+	case CSymbol::LabelTyype::DATA:
+		c = 'D';
+		break;
+	case CSymbol::LabelTyype::DATAl_PAGEZERIO:
+		c = 'Z';
+		break;
+	case CSymbol::LabelTyype::JUMP:
+		c = 'L';
+		break;
+	}
+	sprintf_s(GetName(), MAX_SYMBOL_NAME_LEN, "%c%06d", c, CSymbol::GetLabelCount());
 	return GetName();
 }

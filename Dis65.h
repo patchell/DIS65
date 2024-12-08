@@ -24,7 +24,8 @@ public:
 		ACCESS_8BIT,
 		ACCESS_16BITS,
 		JUMP,
-		BRANCH
+		BRANCH,
+		RETURN
 	};
 	struct Opcode {
 		int m_Opcode;
@@ -220,9 +221,9 @@ private:
 		{0x6E,"ROR",3,ArgType::ACCESS_16BITS, AdrModes::ABSOLUTE},
 		{0x7E,"ROR",3,ArgType::ACCESS_16BITS, AdrModes::ABSOLUTE_X},
 		//-----------------------------------------
-		{ 0x40,"RTI",1,ArgType::JUMP, AdrModes::IMPLIED },
+		{ 0x40,"RTI",1,ArgType::RETURN, AdrModes::IMPLIED },
 		//-----------------------------------------
-		{ 0x60,"RTS",1,ArgType::JUMP, AdrModes::IMPLIED },
+		{ 0x60,"RTS",1,ArgType::RETURN, AdrModes::IMPLIED },
 		//-----------------------------------------
 		{0xE9,"SBC",2,ArgType::NONE, AdrModes::IMMEDIATE},
 		{0xE5,"SBC",2,ArgType::ACCESS_8BIT, AdrModes::ZERO_PAGE},
@@ -280,6 +281,7 @@ public:
 	CDis65();
 	virtual ~CDis65();
 	unsigned DisGet();
+	unsigned DisGetInt(int& c);
 	bool Create(int argc, char* argv[]);
 	Opcode* IsThisIt(int c);
 	CSymbol* GenerateLabelCanidate(unsigned op);
@@ -289,6 +291,6 @@ public:
 	{
 		return low + (high << 8);
 	}
-	CSymTab* GetSymbolTable() { return &m_SymTab; }
+	CSymTab* GetSymbolTabel() { return &m_SymTab; }
 };
 
