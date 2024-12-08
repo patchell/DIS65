@@ -240,3 +240,29 @@ bool CSymTab::FindAll(CBin::BinType Type, int NumberOfObject, CBin** ppObjects)
 	return rV;
 }
 
+CBin* CSymTab::FindAddress(int Address)
+{
+	CBin* rV = 0;
+	CBucket* pBucket;
+	CBin* pBin = 0;
+	int i;
+
+	for (i = 0; i < m_tSize && !rV; ++i)
+	{
+		pBucket = this->GetTable()[i];
+		if (pBucket)
+		{
+			pBin = pBucket->GetHead();
+			while (pBin && !rV)
+			{
+				CSymbol* pSym = (CSymbol*)pBin;
+				if (pSym->GetAddress() == Address)
+					rV = pBin;
+				else
+					pBin = pBin->GetNext();
+			}
+		}
+	}
+	return rV;
+}
+

@@ -33,5 +33,6 @@ public:
 		int NumberOfObject,
 		CBin** ppObjects
 	);
+	CBin* FindAddress(int Address);
 };
 

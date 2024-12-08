@@ -98,6 +98,7 @@ bool CDis65::Create(int argc, char* argv[])
 
 	if (rV)
 	{
+		m_SymTab.Create(101);
 		fopen_s(&m_pOut, m_pOutFile, "w");
 		if (m_pOut == 0)
 		{
@@ -134,15 +135,83 @@ CDis65::Opcode* CDis65::IsThisIt(int c)
 	return rV;
 }
 
+CSymbol* CDis65::GenerateLabelCanidate(unsigned op)
+{
+	CSymbol* pLabel = 0;
+	Opcode* pOP;
+	unsigned High = 0, Low = 0;
+	unsigned Address = 0;
+
+	pOP = IsThisIt(op);
+	switch (pOP->m_ArgType)
+	{
+	case ArgType::ACCESS_16BITS:
+		Low = DisGet();
+		High = DisGet();
+		Address = Make16BitWord(Low, High);
+		if ((pLabel = (CSymbol *)GetSymbolTable()->FindAddress(Address)) == 0)
+		{
+			pLabel = new CSymbol;
+			pLabel->Create();
+			pLabel->MakeLabel(false);
+			pLabel->SetAddress(Address);
+			GetSymbolTable()->AddSymbol(pLabel);
+		}
+		printf("%s $%04x\n", pLabel->GetName(), pLabel->GetAddress());
+		break;
+	case ArgType::ACCESS_8BIT:
+		Low = DisGet();
+		if ((pLabel = (CSymbol*)GetSymbolTable()->FindAddress(Low)) == 0)
+		{
+			pLabel = new CSymbol;
+			pLabel->Create();
+			pLabel->MakeLabel(true);
+			pLabel->SetAddress(Low);
+			GetSymbolTable()->AddSymbol(pLabel);
+		}
+		printf("%s $%02x\n", pLabel->GetName(), pLabel->GetAddress());
+		break;
+	case ArgType::BRANCH:
+		Low = DisGet();
+		break;
+	case ArgType::JUMP:
+		if (pOP->m_Opcode == 0x40 || pOP->m_Opcode == 0x60)
+		{
+
+		}
+		else
+		{
+			Low = DisGet();
+			High = DisGet();
+			Address = Make16BitWord(Low, High);
+			if ((pLabel = (CSymbol*)GetSymbolTable()->FindAddress(Address)) == 0)
+			{
+				pLabel = new CSymbol;
+				pLabel->Create();
+				pLabel->MakeLabel(false);
+				pLabel->SetAddress(Address);
+				GetSymbolTable()->AddSymbol(pLabel);
+			}
+			printf("%s $%04x\n", pLabel->GetName(), pLabel->GetAddress());
+		}
+		break;
+	default:
+		m_Index += pOP->m_ByteCount - 1;
+		break;
+	}
+	return pLabel;
+}
+
 char* CDis65::CreateAsmInstruction(char* pBuff, int BuffLen, unsigned op)
 {
 	unsigned LowByte = 0;
 	unsigned HighByte = 0;
 	unsigned AWord = 0;
 	Opcode* pOP;
+	CSymbol* pSym = 0;
+	char* pS = new char[256];
 
 	pOP = IsThisIt(op);
-
 	if (pOP)
 	{
 		switch (pOP->m_AdressMode)
@@ -151,43 +220,89 @@ char* CDis65::CreateAsmInstruction(char* pBuff, int BuffLen, unsigned op)
 			LowByte = DisGet();
 			HighByte = DisGet();
 			AWord = Make16BitWord(LowByte, HighByte);
-			sprintf_s(pBuff, BuffLen, "\t%s $%04x", pOP->m_pName, AWord);
+			if ((pSym = (CSymbol *)GetSymbolTable()->FindAddress(AWord)) == 0)
+			{
+				printf("error");
+			}
+			else
+				sprintf_s(pBuff, BuffLen, "\t%s %s", pOP->m_pName, pSym->GetName());
 			break;
 		case AdrModes::ABSOLUTE_X:
 			LowByte = DisGet();
 			HighByte = DisGet();
 			AWord = Make16BitWord(LowByte, HighByte);
-			sprintf_s(pBuff, BuffLen, "\t%s $%04x,X", pOP->m_pName, AWord);
+			if ((pSym = (CSymbol*)GetSymbolTable()->FindAddress(AWord)) == 0)
+			{
+				printf("error");
+			}
+			else
+				sprintf_s(pBuff, BuffLen, "\t%s %s,X", pOP->m_pName, pSym->GetName());
 			break;
 		case AdrModes::ABSOLUTE_Y:
 			LowByte = DisGet();
 			HighByte = DisGet();
 			AWord = Make16BitWord(LowByte, HighByte);
-			sprintf_s(pBuff, BuffLen, "\t%s $%04x,Y", pOP->m_pName, AWord);
+			if ((pSym = (CSymbol*)GetSymbolTable()->FindAddress(AWord)) == 0)
+			{
+				printf("error");
+			}
+			else
+				sprintf_s(pBuff, BuffLen, "\t%s %s,Y", pOP->m_pName, pSym->GetName());
 			break;
 		case AdrModes::ZERO_PAGE:
 			LowByte = DisGet();
-			sprintf_s(pBuff, BuffLen, "\t%s $%02x", pOP->m_pName, LowByte);
+			if ((pSym = (CSymbol*)GetSymbolTable()->FindAddress(LowByte)) == 0)
+			{
+				sprintf_s(pBuff, BuffLen, "\t%s $%02x", pOP->m_pName, LowByte);
+			}
+			else
+				sprintf_s(pBuff, BuffLen, "\t%s %s", pOP->m_pName, pSym->GetName());
 			break;
 		case AdrModes::ZERO_PAGE_X:
 			LowByte = DisGet();
-			sprintf_s(pBuff, BuffLen, "\t%s $%02x,X", pOP->m_pName, LowByte);
+			if ((pSym = (CSymbol*)GetSymbolTable()->FindAddress(AWord)) == 0)
+			{
+				sprintf_s(pBuff, BuffLen, "\t%s $%02x,X", pOP->m_pName, LowByte);
+			}
+			else
+				sprintf_s(pBuff, BuffLen, "\t%s %s,X", pOP->m_pName, pSym->GetName());
 			break;
 		case AdrModes::ZERO_PAGE_Y:
 			LowByte = DisGet();
-			sprintf_s(pBuff, BuffLen, "\t%s $%02x,Y", pOP->m_pName, LowByte);
+			if ((pSym = (CSymbol*)GetSymbolTable()->FindAddress(LowByte)) == 0)
+			{
+				sprintf_s(pBuff, BuffLen, "\t%s %s,Y", pOP->m_pName, LowByte);
+			}
+			else
+			{
+				sprintf_s(pBuff, BuffLen, "\t%s %s,Y", pOP->m_pName, pSym->GetName());
+			}
 			break;
 		case AdrModes::ZERO_PAGE_INDEXED_INDIRECT_X:
 			LowByte = DisGet();
-			sprintf_s(pBuff, BuffLen, "\t%s ($%02x,X)", pOP->m_pName, LowByte);
+			if ((pSym = (CSymbol*)GetSymbolTable()->FindAddress(LowByte)) == 0)
+			{
+				sprintf_s(pBuff, BuffLen, "\t%s ($%02x,X)", pOP->m_pName, LowByte);
+			}
+			else
+			{
+				sprintf_s(pBuff, BuffLen, "\t%s (%s,X)", pOP->m_pName, pSym->GetName());
+			}
 			break;
 		case AdrModes::ZERO_PAGE_INDIRECT_INDEXED_Y:
 			LowByte = DisGet();
-			sprintf_s(pBuff, BuffLen, "\t%s ($%02x),Y", pOP->m_pName, LowByte);
+			if ((pSym = (CSymbol*)GetSymbolTable()->FindAddress(LowByte)) == 0)
+			{
+				sprintf_s(pBuff, BuffLen, "\t%s ($%02x),Y", pOP->m_pName, LowByte);
+			}
+			else
+			{
+				sprintf_s(pBuff, BuffLen, "\t%s (%s),y", pOP->m_pName, pSym->GetName());
+			}
 			break;
 		case AdrModes::IMMEDIATE:
 			LowByte = DisGet();
-			sprintf_s(pBuff, BuffLen, "\t%s #$%02x", pOP->m_pName, LowByte);
+			sprintf_s(pBuff, BuffLen, "\t%s #%02x", pOP->m_pName, LowByte);
 			break;
 		case AdrModes::IMPLIED:
 			sprintf_s(pBuff, BuffLen, "\t%s", pOP->m_pName);
@@ -211,6 +326,7 @@ char* CDis65::CreateAsmInstruction(char* pBuff, int BuffLen, unsigned op)
 			break;
 		}
 	}
+	delete[] pS;
 	return pBuff;
 }
 
@@ -218,8 +334,14 @@ int CDis65::Run()
 {
 	int c;
 	bool Loop = true;
-	char* pOutString;
+	char* pOutString = 0;
 
+
+	while ((c = DisGet()) != EOF)
+	{
+		GenerateLabelCanidate(c);
+	}
+	m_Index = 0;
 	pOutString = new char[256];
 	while ((c = DisGet()) != EOF)
 	{

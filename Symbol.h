@@ -1,24 +1,17 @@
 #pragma once
 
-constexpr auto SYMBOL_SCOPE_ANY = 0;
-constexpr auto SYMBOL_SCOPE_GLOBAL = 1;
-constexpr auto SYMBOL_SCOPE_LOCAKL = 2;
 
 class CSymbol: public CBin
 {
-	unsigned m_Address;
-	int m_Value;
-	int m_Scope;
-	bool m_UnResolved;
-	//---------------------------
-	// Type Chain
-	//---------------------------
+	inline static int m_LableCount = 0;
+	int m_Address;
+	bool m_bPageZero;
+	bool m_bUnResolved;
 public:
 	CSymbol() {
 		m_Address = 0;
-		m_Value = 0;
-		m_Scope = SYMBOL_SCOPE_ANY;
-		m_UnResolved = true;
+		m_bPageZero = false;
+		m_bUnResolved = true;
 	}
 	virtual ~CSymbol() {}
 	bool Create() { return true; }
@@ -27,19 +20,20 @@ public:
 	//-----------------------------
 	// Accessor Methods
 	//-----------------------------
-	unsigned GetAddress() { return m_Address; }
-	void SetAddress(unsigned A) { m_Address = A; }
-	int GetValue() { return m_Value; }
-	void SetValue(int v) { m_Value = v; }
-	int GetScope() { return m_Scope; }
-	void SetScope(int S) { m_Scope = S; }
+	int GetAddress() { return m_Address; }
+	void SetAddress(unsigned A) { m_Address = int(A); }
+	void SetAddress(int A) { m_Address = A; }
 	bool IsUnResolved() {
-		return m_UnResolved;
+		return m_bUnResolved;
 	}
 	bool IsResolved() {
-		return !m_UnResolved;
+		return !m_bUnResolved;
 	}
-	void SetResolved() { m_UnResolved = false; }
-	void SetUnResolved() { m_UnResolved = true; }
+	void SetResolved() { m_bUnResolved = false; }
+	void SetUnResolved() { m_bUnResolved = true; }
+	void SetPageZero(bool tf) { m_bPageZero = tf; }
+	bool IsPageZero() { return m_bPageZero; }
+	static int GetLabelCount() { return m_LableCount++; }
+	char* MakeLabel(bool PageZero);
 };
 
