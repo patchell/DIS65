@@ -285,6 +285,10 @@ public:
 	bool Create(int argc, char* argv[]);
 	Opcode* IsThisIt(int c);
 	CSymbol* GenerateLabelCanidate(unsigned op);
+	char* CreateDeclarations(char* pB, int n);
+	void Sort(CSymbol** ppDataLabels, int DataLabelCount);
+	int FindDataLabels(CSymbol** ppDataLabels, int n);
+	int CountDataLabels();
 	char* CreateAsmInstruction(char* pBuff, int BuffLen, unsigned op);
 	int Run();
 	unsigned Make16BitWord(unsigned low, unsigned high)
@@ -292,5 +296,6 @@ public:
 		return low + (high << 8);
 	}
 	CSymTab* GetSymbolTabel() { return &m_SymTab; }
+	CSymbol* CreateStartLabel();
 };
 

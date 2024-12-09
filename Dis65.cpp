@@ -228,6 +228,138 @@ CSymbol* CDis65::GenerateLabelCanidate(unsigned op)
 	return pLabel;
 }
 
+char* CDis65::CreateDeclarations(char* pB, int n)
+{
+	int DataLabelCount;
+	CSymbol** ppDataLabel;
+	CSymbol* pSym=0;
+	int i;
+	int Size = 0;
+
+	DataLabelCount = CountDataLabels();
+	ppDataLabel = new CSymbol * [DataLabelCount];
+	for (i = 0; i < DataLabelCount; ++i)
+		ppDataLabel[i] = 0;
+	FindDataLabels(ppDataLabel, DataLabelCount);
+	Sort(ppDataLabel, DataLabelCount);
+	for (i = 0; i < DataLabelCount; ++i)
+	{
+		pSym = ppDataLabel[i];
+		switch (pSym->GetLabelType())
+		{
+		case CSymbol::LabelTyype::DATA:
+			Size = 2;
+			break;
+		case CSymbol::LabelTyype::DATAl_PAGEZERIO:
+			Size = 1;
+			break;
+		}
+		fprintf(m_pOut, "%s\t.DS %d\n", pSym->GetName(), Size);
+	}
+	return 0;
+}
+
+void CDis65::Sort(CSymbol** ppDataLabels, int DataLabelCount)
+{
+	//---------------------------------
+	// Bubble sort? We don't need no
+	// stinking buggle sort
+	//---------------------------------
+	int Changes = 1;
+	int i;
+	CSymbol* pSymTemp;
+
+	while (Changes)
+	{
+		Changes = 0;
+		for (i = 0; i < (DataLabelCount - 1);++i)
+		{
+			if (ppDataLabels[i]->GetAddress() < ppDataLabels[i + 1]->GetAddress())
+			{
+				//---------------------------------
+				// Swap the two entries
+				//---------------------------------
+				pSymTemp = ppDataLabels[i];
+				ppDataLabels[i] = ppDataLabels[i + 1];
+				ppDataLabels[i + 1] = pSymTemp;
+				Changes++;
+			}
+		}
+		printf("Changes: %d\n", Changes);
+	}
+}
+
+int CDis65::FindDataLabels(CSymbol** ppDataLabels, int DataLabelCount)
+{
+	CBucket** ppBucket = 0;
+	int i = 0;
+	int n = GetSymbolTabel()->GetTableSize();
+	CBin* pBin = 0;
+	CSymbol* pSym = 0;
+	bool Loop = true;
+	int Index = 0;
+
+	ppBucket = GetSymbolTabel()->GetTable();
+	for (i = 0; (i < n) ; ++i)
+	{
+		if (ppBucket[i])
+		{
+			pSym = (CSymbol*)ppBucket[i]->GetHead();
+			while (pSym)
+			{
+				switch (pSym->GetLabelType())
+				{
+				case CSymbol::LabelTyype::DATA:
+				case CSymbol::LabelTyype::DATAl_PAGEZERIO:
+					printf("Lable: %s\n", pSym->GetName());
+					if (Index < DataLabelCount)
+						ppDataLabels[Index++] = pSym;
+					else
+						printf("Well, that shouldn't happen\n");
+					break;
+				}
+				pSym = (CSymbol*)pSym->GetNext();
+			}
+		}
+	}
+	return Index;
+}
+
+int CDis65::CountDataLabels()
+{
+	CBucket** ppBucket = 0;
+	int i = 0;
+	int n = GetSymbolTabel()->GetTableSize();
+	CBin* pBin = 0;
+	bool Loop = true;
+	int DataLabelCount = 0;
+	CSymbol* pSym = 0;
+
+	ppBucket = GetSymbolTabel()->GetTable();
+	for (i = 0; (i < n); ++i)
+	{
+		if (ppBucket[i])
+		{
+			printf("i=%d\n", i);
+			pBin = ppBucket[i]->GetHead();
+			while (pBin)
+			{
+				pSym = (CSymbol *) pBin;
+				switch (pSym->GetLabelType())
+				{
+				case CSymbol::LabelTyype::DATA:
+				case CSymbol::LabelTyype::DATAl_PAGEZERIO:
+					DataLabelCount++;
+					printf("Count Lable: %s\n", pSym->GetName());
+					break;
+				}
+				pBin = pBin->GetNext();
+			}
+		}
+	}
+	return DataLabelCount;
+}
+
 char* CDis65::CreateAsmInstruction(char* pBuff, int BuffLen, unsigned op)
 {
 	unsigned LowByte = 0;
@@ -381,12 +513,18 @@ int CDis65::Run()
 	int Adr = 0;
 	CSymbol* pLabel = 0;
 
+	
 	while ((c = DisGet()) != EOF)
 	{
 		GenerateLabelCanidate(c);
 	}
+	CreateDeclarations(pOutString, 256);
 	m_Index = 0;
+	pLabel = CreateStartLabel();
+	GetSymbolTabel()->AddSymbol(pLabel);
 	pOutString = new char[256];
+	c = DisGet();
+	fprintf(m_pOut, "%s %s\n", pLabel->GetName(), CreateAsmInstruction(pOutString, 256, c));
 	while (Loop)
 	{
 		Adr = m_Index;
@@ -405,5 +543,39 @@ int CDis65::Run()
 	delete[] pOutString;
 
 	return 0;
+}
+
+CSymbol* CDis65::CreateStartLabel()
+{
+	CSymbol* pSym = 0;
+	char* pName = new char[512];
+	char* pLast = 0;
+	char* pFirstDot = 0;
+	char* pLabName = 0;
+
+	strcpy_s(pName, 512, m_pOutFile);
+	pLast = strrchr(pName, '\\');
+	if (pLast)
+	{
+		++pLast;
+		pFirstDot = strchr(pLast, '.');
+		if (pFirstDot)
+			*pFirstDot = 0;
+		pLabName = pLast;
+	}
+	else
+	{
+		pFirstDot = strchr(pName, '.');
+		if (pFirstDot)
+			*pFirstDot = 0;
+		pLabName = pName;
+	}
+	pSym = new CSymbol;
+	pSym->Create();
+	pSym->SetName(pLabName);
+	pSym->SetAddress(0);
+	pSym->SetLableType(CSymbol::LabelTyype::START);
+	delete[]pName;
+	return pSym;
 }
 

@@ -5,10 +5,12 @@ class CSymbol: public CBin
 {
 public:
 	enum LabelTyype {
+		NONE,
 		DATAl_PAGEZERIO,
 		DATA,
 		JUMP,
-		BRANCH
+		BRANCH,
+		START
 	};
 private:
 	inline static int m_LableCount = 0;
@@ -21,6 +23,7 @@ public:
 		m_Address = 0;
 		m_bPageZero = false;
 		m_bUnResolved = true;
+		m_LabelType = CSymbol::LabelTyype::NONE;
 	}
 	virtual ~CSymbol() {}
 	bool Create() { return true; }
