@@ -9,11 +9,6 @@ bool CBin::Compare(const char* name, int aux)
     return rV;
 }
 
-void CBin::Print(FILE* pOut, const char* s)
-{
-	fprintf(pOut, "CBin::%s\n", m_pName);
-}
-
 //-----------------------------------------------
 // Sub list methods
 //-----------------------------------------------
@@ -33,21 +28,21 @@ void CBin::Add(CBin* pSym)
 	}
 }
 
-CBin* CBin::Find(const char* pName, CBin::BinType Type)
-{
-	CBin* pBin = 0;
-	bool loop = true;
-
-	pBin = GetHead();
-	while (pBin && loop)
-	{
-		if (pBin->Compare(pName, Type))
-			loop = false;
-		else
-			pBin = pBin->GetNext();
-	}
-	return pBin;
-}
+//CBin* CBin::Find(const char* pName)
+//{
+//	CBin* pBin = 0;
+//	bool loop = true;
+//
+//	pBin = GetHead();
+//	while (pBin && loop)
+//	{
+//		if (pBin->Compare(pName, Type))
+//			loop = false;
+//		else
+//			pBin = pBin->GetNext();
+//	}
+//	return pBin;
+//}
 
 void CBin::Delete(CBin* pSym)
 {

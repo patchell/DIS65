@@ -47,7 +47,10 @@ CDis65::CDis65()
 	m_pInFile = 0;
 	m_pOutFile = 0;
 	m_pOut = 0;
-
+	m_StartAddress = 0xa000;
+	m_StartData = 0;	//Not Page Zero
+	m_pHead = 0;
+	m_pTail = 0;
 }
 
 CDis65::~CDis65()
@@ -59,8 +62,6 @@ unsigned CDis65::DisGet()
 {
 	unsigned rV = 0;
 
-	if (m_Index > 60)
-		printf("Hi!\n");
 	if (m_Index == m_InFileSize)
 		rV = unsigned(-1);
 	else
@@ -156,74 +157,79 @@ CSymbol* CDis65::GenerateLabelCanidate(unsigned op)
 	int BranchData = 0;
 
 	pOP = IsThisIt(op);
-	switch (pOP->m_ArgType)
+	if (pOP)
 	{
-	case ArgType::ACCESS_16BITS:
-		Low = DisGet();
-		High = DisGet();
-		Address = Make16BitWord(Low, High);
-		if ((pLabel = (CSymbol *)GetSymbolTabel()->FindAddress(Address)) == 0)
+		switch (pOP->m_ArgType)
 		{
-			pLabel = new CSymbol;
-			pLabel->Create();
-			pLabel->SetLableType(CSymbol::LabelTyype::DATA);
-			pLabel->MakeLabel();
-			pLabel->SetAddress(Address);
-			GetSymbolTabel()->AddSymbol(pLabel);
+		case ArgType::ACCESS_16BITS:
+			Low = DisGet();
+			High = DisGet();
+			Address = Make16BitWord(Low, High);
+			if ((pLabel = (CSymbol*)GetSymbolTabel()->FindAddress(Address)) == 0)
+			{
+				pLabel = new CSymbol;
+				pLabel->Create();
+				pLabel->SetLableType(CSymbol::LabelType::DATA);
+				pLabel->MakeLabel();
+				pLabel->SetAddress(Address);
+				GetSymbolTabel()->AddSymbol(pLabel);
+			}
+			break;
+		case ArgType::ACCESS_8BIT:
+			Low = DisGet();
+			if ((pLabel = (CSymbol*)GetSymbolTabel()->FindAddress(Low)) == 0)
+			{
+				pLabel = new CSymbol;
+				pLabel->Create();
+				pLabel->SetLableType(CSymbol::LabelType::DATA_PAGEZERO);
+				pLabel->MakeLabel();
+				pLabel->SetAddress(Low);
+				GetSymbolTabel()->AddSymbol(pLabel);
+			}
+			break;
+		case ArgType::BRANCH:
+			DisGetInt(BranchData);
+			Address = unsigned(m_Index + BranchData);
+			pLabel = (CSymbol*)GetSymbolTabel()->FindAddress(Address);
+			if (!pLabel)
+			{
+				pLabel = new CSymbol;
+				pLabel->Create();
+				pLabel->SetLableType(CSymbol::LabelType::BRANCH);
+				pLabel->SetAddress(Address);
+				pLabel->MakeLabel();
+				pLabel->SetAddress(Address);
+				GetSymbolTabel()->AddSymbol(pLabel);
+			}
+			break;
+		case ArgType::JUMP:
+			Low = DisGet();
+			High = DisGet();
+			Address = Make16BitWord(Low, High);
+			if ((pLabel = (CSymbol*)GetSymbolTabel()->FindAddress(Address)) == 0)
+			{
+				pLabel = new CSymbol;
+				pLabel->Create();
+				pLabel->SetLableType(CSymbol::LabelType::JUMP);
+				pLabel->MakeLabel();
+				pLabel->SetAddress(Address);
+				GetSymbolTabel()->AddSymbol(pLabel);
+			}
+			break;
+		case ArgType::RETURN:
+			break;
+		default:
+			m_Index += pOP->m_ByteCount - 1;
+			break;
 		}
-		printf("%s $%04x\n", pLabel->GetName(), pLabel->GetAddress());
-		break;
-	case ArgType::ACCESS_8BIT:
-		Low = DisGet();
-		if ((pLabel = (CSymbol*)GetSymbolTabel()->FindAddress(Low)) == 0)
-		{
-			pLabel = new CSymbol;
-			pLabel->Create();
-			pLabel->SetLableType(CSymbol::LabelTyype::DATAl_PAGEZERIO);
-			pLabel->MakeLabel();
-			pLabel->SetAddress(Low);
-			GetSymbolTabel()->AddSymbol(pLabel);
-		}
-		printf("%s $%02x\n", pLabel->GetName(), pLabel->GetAddress());
-		break;
-	case ArgType::BRANCH:
-		DisGetInt(BranchData);
-		printf("Branch Data %d\n", BranchData);
-		Address = unsigned(m_Index + BranchData);
-		pLabel = (CSymbol*)GetSymbolTabel()->FindAddress(Address);
-		if (!pLabel)
-		{
-			pLabel = new CSymbol;
-			pLabel->Create();
-			pLabel->SetLableType(CSymbol::LabelTyype::BRANCH);
-			pLabel->SetAddress(Address);
-			pLabel->MakeLabel();
-			pLabel->SetAddress(Address);
-			printf("Label:%s Address:%d\n", pLabel->GetName(), pLabel->GetAddress());
-			GetSymbolTabel()->AddSymbol(pLabel);
-			printf("%s $%02x\n", pLabel->GetName(), pLabel->GetAddress());
-		}
-		break;
-	case ArgType::JUMP:
-		Low = DisGet();
-		High = DisGet();
-		Address = Make16BitWord(Low, High);
-		if ((pLabel = (CSymbol*)GetSymbolTabel()->FindAddress(Address)) == 0)
-		{
-			pLabel = new CSymbol;
-			pLabel->Create();
-			pLabel->SetLableType(CSymbol::LabelTyype::JUMP);
-			pLabel->MakeLabel();
-			pLabel->SetAddress(Address);
-			GetSymbolTabel()->AddSymbol(pLabel);
-			printf("%s $%04x\n", pLabel->GetName(), pLabel->GetAddress());
-		}
-		break;
-	case ArgType::RETURN:
-		break;
-	default:
-		m_Index += pOP->m_ByteCount - 1;
-		break;
+	}
+	else
+	{
+		fprintf(stderr, "Unknown Opcode:$%02x Address:$%04x  %d\n",
+			op,
+			m_Index - 1,
+			m_Index - 1
+		);
 	}
 	return pLabel;
 }
@@ -247,10 +253,10 @@ char* CDis65::CreateDeclarations(char* pB, int n)
 		pSym = ppDataLabel[i];
 		switch (pSym->GetLabelType())
 		{
-		case CSymbol::LabelTyype::DATA:
+		case CSymbol::LabelType::DATA:
 			Size = 2;
 			break;
-		case CSymbol::LabelTyype::DATAl_PAGEZERIO:
+		case CSymbol::LabelType::DATA_PAGEZERO:
 			Size = 1;
 			break;
 		}
@@ -285,7 +291,6 @@ void CDis65::Sort(CSymbol** ppDataLabels, int DataLabelCount)
 				Changes++;
 			}
 		}
-		printf("Changes: %d\n", Changes);
 	}
 }
 
@@ -309,13 +314,12 @@ int CDis65::FindDataLabels(CSymbol** ppDataLabels, int DataLabelCount)
 			{
 				switch (pSym->GetLabelType())
 				{
-				case CSymbol::LabelTyype::DATA:
-				case CSymbol::LabelTyype::DATAl_PAGEZERIO:
-					printf("Lable: %s\n", pSym->GetName());
+				case CSymbol::LabelType::DATA:
+				case CSymbol::LabelType::DATA_PAGEZERO:
 					if (Index < DataLabelCount)
 						ppDataLabels[Index++] = pSym;
 					else
-						printf("Well, that shouldn't happen\n");
+						fprintf(stderr,"Well, that shouldn't happen\n");
 					break;
 				}
 				pSym = (CSymbol*)pSym->GetNext();
@@ -340,17 +344,15 @@ int CDis65::CountDataLabels()
 	{
 		if (ppBucket[i])
 		{
-			printf("i=%d\n", i);
 			pBin = ppBucket[i]->GetHead();
 			while (pBin)
 			{
 				pSym = (CSymbol *) pBin;
 				switch (pSym->GetLabelType())
 				{
-				case CSymbol::LabelTyype::DATA:
-				case CSymbol::LabelTyype::DATAl_PAGEZERIO:
+				case CSymbol::LabelType::DATA:
+				case CSymbol::LabelType::DATA_PAGEZERO:
 					DataLabelCount++;
-					printf("Count Lable: %s\n", pSym->GetName());
 					break;
 				}
 				pBin = pBin->GetNext();
@@ -381,7 +383,7 @@ char* CDis65::CreateAsmInstruction(char* pBuff, int BuffLen, unsigned op)
 			AWord = Make16BitWord(LowByte, HighByte);
 			if ((pSym = (CSymbol *)GetSymbolTabel()->FindAddress(AWord)) == 0)
 			{
-				printf("error");
+				fprintf(stderr, "error");
 			}
 			else
 				sprintf_s(pBuff, BuffLen, "\t%s %s", pOP->m_pName, pSym->GetName());
@@ -390,11 +392,7 @@ char* CDis65::CreateAsmInstruction(char* pBuff, int BuffLen, unsigned op)
 			LowByte = DisGet();
 			HighByte = DisGet();
 			AWord = Make16BitWord(LowByte, HighByte);
-			if ((pSym = (CSymbol*)GetSymbolTabel()->FindAddress(AWord)) == 0)
-			{
-				printf("error");
-			}
-			else
+			if ((pSym = (CSymbol*)GetSymbolTabel()->FindAddress(AWord)) != 0)
 				sprintf_s(pBuff, BuffLen, "\t%s %s,X", pOP->m_pName, pSym->GetName());
 			break;
 		case AdrModes::ABSOLUTE_Y:
@@ -403,7 +401,7 @@ char* CDis65::CreateAsmInstruction(char* pBuff, int BuffLen, unsigned op)
 			AWord = Make16BitWord(LowByte, HighByte);
 			if ((pSym = (CSymbol*)GetSymbolTabel()->FindAddress(AWord)) == 0)
 			{
-				printf("error");
+				fprintf(stderr,"error");
 			}
 			else
 				sprintf_s(pBuff, BuffLen, "\t%s %s,Y", pOP->m_pName, pSym->GetName());
@@ -433,7 +431,7 @@ char* CDis65::CreateAsmInstruction(char* pBuff, int BuffLen, unsigned op)
 				sprintf_s(
 					pBuff, 
 					BuffLen, 
-					"\t%s %s,Y", 
+					"\t%s %02x,Y", 
 					pOP->m_pName, 
 					LowByte);
 			}
@@ -461,7 +459,7 @@ char* CDis65::CreateAsmInstruction(char* pBuff, int BuffLen, unsigned op)
 			}
 			else
 			{
-				sprintf_s(pBuff, BuffLen, "\t%s (%s),y", pOP->m_pName, pSym->GetName());
+				sprintf_s(pBuff, BuffLen, "\t%s (%s),Y", pOP->m_pName, pSym->GetName());
 			}
 			break;
 		case AdrModes::IMMEDIATE:
@@ -481,7 +479,6 @@ char* CDis65::CreateAsmInstruction(char* pBuff, int BuffLen, unsigned op)
 //			Adr = m_Index;
 			DisGetInt(RelAdr);
 			Adr =  m_Index + RelAdr;
-			printf("Relative Address %d\n", Adr);
 			pSym = (CSymbol*)GetSymbolTabel()->FindAddress(Adr);
 			if (pSym)
 			{
@@ -540,6 +537,7 @@ int CDis65::Run()
 				fprintf(m_pOut, "%s\n", CreateAsmInstruction(pOutString, 256, c));
 		}
 	}
+	GetSymbolTabel()->PrintTable(m_pOut);
 	delete[] pOutString;
 
 	return 0;
@@ -574,8 +572,105 @@ CSymbol* CDis65::CreateStartLabel()
 	pSym->Create();
 	pSym->SetName(pLabName);
 	pSym->SetAddress(0);
-	pSym->SetLableType(CSymbol::LabelTyype::START);
+	pSym->SetLableType(CSymbol::LabelType::START);
 	delete[]pName;
 	return pSym;
 }
 
+void CDis65::FindDeadSpots()
+{
+	Opcode* pOP = 0;
+	int c = 0;
+	unsigned Low = 0, High = 0;
+	unsigned Address = 0;
+	int BranchData = 0;
+	DeadMemory* pDeadMemory = 0;
+	int BranchAllways = 0;
+	int BranchJump = 0;
+
+	int i = 0;
+
+	while ((c = DisGet()) != EOF)
+	{
+		pOP = IsThisIt(c);
+		if (pOP)
+		{
+			switch (pOP->m_ArgType)
+			{
+			case ArgType::NONE:
+				for (i = 0; i < BranchAllwaysLUTDim, ++i)
+				{
+					if (pOP->m_Opcode == BranchAlwaysLUT[i].Op1)
+					{
+						BranchAllways = pOP->m_Opcode;
+					}
+				}
+				break;
+			case ArgType::ACCESS_8BIT:
+				Address = DisGet();
+				break;
+			case ArgType::ACCESS_16BITS:
+				Low = DisGet();
+				High = DisGet();
+				Address = Make16BitWord(Low, High);
+				break;
+			case ArgType::JUMP:
+				Low = DisGet();
+				High = DisGet();
+				Address = Make16BitWord(Low, High);
+				break;
+			case ArgType::BRANCH:
+				DisGetInt(BranchData);
+				Address = unsigned(m_Index + BranchData);
+				pDeadMemory = new DeadMemory;
+				pDeadMemory->SetStatus(DMSTATUS_ALIVE);
+				pDeadMemory->SetStartAddress(Address);
+				break;
+			case ArgType::RETURN:
+				break;
+			default:
+				break;
+			}
+		}
+		else
+		{
+			//-------------------------
+			// You know, this might be
+			// dead memory
+			//--------------------------
+		}
+	}
+	m_Index = 0;
+}
+
+void CDis65::Add(DeadMemory* pDM)
+{
+	if (m_pHead)
+	{
+		m_pTail->SetNext(pDM);
+		pDM->SetPrev(m_pTail);
+		m_pTail = pDM;
+	}
+	else
+	{
+		m_pTail = pDM;
+		m_pHead = pDM;
+	}
+}
+
+const char* CDis65::DeadTypeStrings::LookUp(DeadType Type)
+{
+	int i = 0;
+	bool Loop = true;
+	const char* pS = 0;
+
+	for (i = 0; (i < 4) && Loop; ++i)
+	{
+		if (Type == DeadTypeStringLUT[i].m_Type)
+		{
+			pS = DeadTypeStringLUT[i].m_pName;
+			Loop = false;
+		}
+	}
+	return pS;
+}

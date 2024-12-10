@@ -67,15 +67,15 @@ bool CSymTab::Create(int TableDepth)
 //
 //******************************************************
 
-CBin* CSymTab::FindSymbol(const char* name, int scope)
-{
-	CBin* pRV = NULL;
-
-	int Index = Hash(name);	//get index from hash of name
-	if(m_ppTab[Index] != 0)
-		pRV = m_ppTab[Index]->Find(name, scope);
-	return pRV;
-}
+//CBin* CSymTab::FindSymbol(const char* name, int scope)
+//{
+//	CBin* pRV = NULL;
+//
+//	int Index = Hash(name);	//get index from hash of name
+//	if(m_ppTab[Index] != 0)
+//		pRV = m_ppTab[Index]->Find(name, scope);
+//	return pRV;
+//}
 
 //***********************************************************
 // AddSym
@@ -169,6 +169,7 @@ void CSymTab::PrintTable(FILE* pOut)
 	// Scan table to find longest
 	// name
 	//------------------------------
+	fprintf(pOut, "------------------ Symbol Table ------------------\n");
 	for (i = 0; i < m_tSize; ++i)
 	{
 		if (m_ppTab[i] == NULL)
@@ -203,42 +204,42 @@ void CSymTab::PrintTable(FILE* pOut)
 }
 
 
-bool CSymTab::FindAll(CBin::BinType Type, int NumberOfObject, CBin** ppObjects)
-{
-	bool rV = true;
-	int ItemCount = 0;
-	CBucket* pBucket;
-	CBin* pBin;
-	int i;
-
-	for (i = 0; i < m_tSize; ++i)
-	{
-		pBucket = this->GetTable()[i];
-		if (pBucket)
-		{
-			pBin = pBucket->GetHead();
-			while (pBin)
-			{
-				if (pBin->GetType() == Type)
-				{
-					if (ItemCount < NumberOfObject)
-					{
-						ppObjects[ItemCount] = pBin;
-						ItemCount++;
-					}
-					else
-					{
-						++ItemCount;
-					}
-				}
-				pBin = pBin->GetNext();
-			}
-		}
-	}
-	if (ItemCount > NumberOfObject - 1)
-		rV = false;
-	return rV;
-}
+//bool CSymTab::FindAll(CBin::BinType Type, int NumberOfObject, CBin** ppObjects)
+//{
+//	bool rV = true;
+//	int ItemCount = 0;
+//	CBucket* pBucket;
+//	CBin* pBin;
+//	int i;
+//
+//	for (i = 0; i < m_tSize; ++i)
+//	{
+//		pBucket = this->GetTable()[i];
+//		if (pBucket)
+//		{
+//			pBin = pBucket->GetHead();
+//			while (pBin)
+//			{
+//				if (pBin->GetType() == Type)
+//				{
+//					if (ItemCount < NumberOfObject)
+//					{
+//						ppObjects[ItemCount] = pBin;
+//						ItemCount++;
+//					}
+//					else
+//					{
+//						++ItemCount;
+//					}
+//				}
+//				pBin = pBin->GetNext();
+//			}
+//		}
+//	}
+//	if (ItemCount > NumberOfObject - 1)
+//		rV = false;
+//	return rV;
+//}
 
 CBin* CSymTab::FindAddress(int Address)
 {

@@ -1,5 +1,18 @@
 #pragma once
 
+constexpr auto OpBEQ = 0xF0;
+constexpr auto OpBNE = 0xD0;
+constexpr auto OpBMI = 0x30;
+constexpr auto OpBPL = 0x10;
+constexpr auto OpBCC = 0x90;
+constexpr auto OpBCS = 0xB0;
+constexpr auto OpCLC = 0x18;
+constexpr auto OpSEC = 0x38;
+constexpr auto OpCLV = 0xB8;
+constexpr auto OpBVC = 0x50;
+constexpr auto BranchAllwaysLUTDim = 6;
+
+
 class CDis65
 {
 public:
@@ -19,13 +32,53 @@ public:
 		RELATIVE,
 		ACCUMULATOR
 	};
-	enum ArgType {
+	enum class ArgType {
 		NONE,
 		ACCESS_8BIT,
 		ACCESS_16BITS,
 		JUMP,
 		BRANCH,
 		RETURN
+	};
+	enum class DeadType {
+		NONE,
+		JUMP,
+		BRANCH,
+		RETURN
+	};
+	enum {
+		DMSTATUS_UNKNOWN,
+		DMSTATUS_DEAD,
+		DMSTATUS_ALIVE
+	};
+	class DeadMemory {
+		int m_Start;
+		int m_End;
+		int m_Status;
+		DeadType m_DeadType;
+		DeadMemory* m_pNext;
+		DeadMemory* m_pPrev;
+	public:
+		DeadMemory() {
+			m_Start = -1;
+			m_End = -1;
+			m_pNext = 0;
+			m_pPrev = 0;
+			m_DeadType = DeadType::NONE;
+			m_Status = DMSTATUS_UNKNOWN;
+		}
+		virtual ~DeadMemory() {}
+		void SetStatus(int s) { m_Status = s; }
+		int GetStatus() { return m_Status; }
+		void SetNext(DeadMemory* pN) { m_pNext = pN; }
+		DeadMemory* GetNext() { return m_pNext; }
+		void SetPrev(DeadMemory* pP) { m_pPrev = pP; }
+		DeadMemory* GetPrev() { return m_pPrev; }
+		void SetStartAddress(int SA) { m_Start = SA };
+		int GetStartAddress() { return m_Start; }
+		void SetEndAddress(int EA) { m_End = EA; }
+		int GetEndAddress() { return m_End; }
+
 	};
 	struct Opcode {
 		int m_Opcode;
@@ -59,7 +112,37 @@ public:
 			return (op == m_Opcode);
 		}
 	};
+	struct BranchAllwaysPairs {
+		unsigned Op1;
+		unsigned Op1Len;
+		unsigned Op2;
+		unsigned Op2Len;
+	};
+	struct DeadTypeStrings {
+		DeadType m_Type;
+		const char* m_pName;
+		DeadTypeStrings(DeadType Type, const char* pName) {
+			m_Type = Type;
+			m_pName = pName;
+		}
+		static const char* LookUp(DeadType Type);
+	};
 private:
+	inline static DeadTypeStrings DeadTypeStringLUT[5] = {
+		{DeadType::NONE,"NONE"},
+		{DeadType::JUMP,"JUMP"},
+		{DeadType::BRANCH,"BRANCH"},
+		{DeadType::RETURN,"RETURN"},
+		{DeadType(-1),NULL}
+	};
+	inline static BranchAllwaysPairs BranchAlwaysLUT[BranchAllwaysLUTDim] = {
+		{OpBEQ,2,OpBNE,2},
+		{OpBPL,2,OpBMI,2},
+		{OpBCC,2,OpBCS,2},
+		{OpCLC,1,OpBCC,2},
+		{OpSEC,1,OpBCS,2},
+		{OpCLV,1,OpBVC,2}
+	};
 	inline static Opcode OpcodeLUT[] = {
 		{0x69,"ADC",2,ArgType::NONE, AdrModes::IMMEDIATE},
 		{0x65,"ADC",2,ArgType::ACCESS_8BIT, AdrModes::ZERO_PAGE},
@@ -236,7 +319,7 @@ private:
 		//-----------------------------------------
 		{ 0x38,"SEC",1,ArgType::NONE, AdrModes::IMPLIED },
 		//-----------------------------------------
-		{ 0xF8,"SEC",1,ArgType::NONE, AdrModes::IMPLIED },
+		{ 0xF8,"SED",1,ArgType::NONE, AdrModes::IMPLIED },
 		//-----------------------------------------
 		{ 0x78,"SEI",1,ArgType::NONE, AdrModes::IMPLIED },
 		//-----------------------------------------
@@ -277,6 +360,10 @@ private:
 	char* m_pOutFile;
 	FILE* m_pOut;
 	CSymTab m_SymTab;
+	DeadMemory* m_pHead;
+	DeadMemory* m_pTail;
+	unsigned m_StartAddress;
+	unsigned m_StartData;	//Not Page Zero
 public:
 	CDis65();
 	virtual ~CDis65();
@@ -297,5 +384,12 @@ public:
 	}
 	CSymTab* GetSymbolTabel() { return &m_SymTab; }
 	CSymbol* CreateStartLabel();
+	//----------------------------------------------
+	DeadMemory* GetHead() { return m_pHead; }
+	void SetHead(DeadMemory* pH) { m_pHead = pH; }
+	DeadMemory* GetTail() { return m_pTail; }
+	void SetTail(DeadMemory* pT) { m_pTail = pT; }
+	void FindDeadSpots();
+	void Add(DeadMemory* pDM);
 };
 

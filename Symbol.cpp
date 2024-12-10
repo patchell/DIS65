@@ -12,14 +12,13 @@ bool CSymbol::Compare(const char* name, int scope)
 }
 
 
-void CSymbol::Print(FILE* pOut, const char* s)
+void CSymbol::Print(FILE* pOut)
 {
-	//fprintf(pOut, "%s:Address=%08lx  Value=%04x  Scope=%d\n",
-	//	GetName(),
-	//	GetAddress(),
-	//	GetValue(),
-	//	GetScope()
-	//);
+	fprintf(pOut, "%s:Address=%08lx  Type=%s\n",
+		GetName(),
+		GetAddress(),
+		LookupLabelType(GetLabelType())
+	);
 }
 
 char* CSymbol::MakeLabel()
@@ -28,19 +27,43 @@ char* CSymbol::MakeLabel()
 
 	switch (m_LabelType)
 	{
-	case CSymbol::LabelTyype::BRANCH:
+	case CSymbol::LabelType::BRANCH:
 		c = 'B';
 		break;
-	case CSymbol::LabelTyype::DATA:
+	case CSymbol::LabelType::DATA:
 		c = 'D';
 		break;
-	case CSymbol::LabelTyype::DATAl_PAGEZERIO:
+	case CSymbol::LabelType::DATA_PAGEZERO:
 		c = 'Z';
 		break;
-	case CSymbol::LabelTyype::JUMP:
+	case CSymbol::LabelType::JUMP:
 		c = 'L';
 		break;
 	}
 	sprintf_s(GetName(), MAX_SYMBOL_NAME_LEN, "%c%06d", c, CSymbol::GetLabelCount());
 	return GetName();
+}
+
+const char* CSymbol::LookupLabelType(LabelType Type)
+{
+	const char* pTypeName = 0;
+	bool Loop = true;
+	int Index = 0;
+
+	while (Loop)
+	{
+		if (LabelTypeLUT[Index].GetName())
+		{
+			if (LabelTypeLUT[Index].GetType() == Type)
+			{
+				pTypeName = LabelTypeLUT[Index].GetName();
+				Loop = false;
+			}
+			else
+				Index++;
+		}
+		else
+			Loop = false;
+	}
+    return pTypeName;
 }

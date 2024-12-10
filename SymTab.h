@@ -21,18 +21,13 @@ public:
 	bool Create(int TableDepth);
 	int GetSectionCount() { return m_SectionSymbolCount; }
 	int GetSymbolCount() { return m_GeneralSymbolCount; }
-	virtual CBin* FindSymbol(const char* name, int scope);
+//	virtual CBin* FindSymbol(const char* name, int scope);
 	virtual void AddSymbol(CBin* pSym);
 	virtual void DelSymbol(CBin* pSym);
 	virtual void PrintTable(FILE* pOut);
 	inline int GetNumElements() { return m_nElements; }
 	inline int GetTableSize() { return m_tSize; }
 	inline CBucket** GetTable() { return m_ppTab; }
-	bool FindAll(
-		CBin::BinType Type,
-		int NumberOfObject,
-		CBin** ppObjects
-	);
 	CBin* FindAddress(int Address);
 };
 

@@ -9,7 +9,7 @@ CBucket::~CBucket()
 
 	while (pBin)
 	{
-		pBin->Print(stdout);
+//		pBin->Print(stdout);
 		m_pHead = pBin->GetNext();
 		delete pBin;
 		pBin = m_pHead;
@@ -31,21 +31,21 @@ void CBucket::Add(CBin* pSym)
 	}
 }
 
-CBin* CBucket::Find(const char* pName, int scope)
-{
-	CBin* pBin = 0;
-	bool loop = true;
-
-	pBin = GetHead();
-	while (pBin && loop)
-	{
-		if (pBin->Compare(pName, scope))
-			loop = false;
-		else
-			pBin = pBin->GetNext();
-	}
-	return pBin;
-}
+//CBin* CBucket::Find(const char* pName, int scope)
+//{
+//	CBin* pBin = 0;
+//	bool loop = true;
+//
+//	pBin = GetHead();
+//	while (pBin && loop)
+//	{
+//		if (pBin->Compare(pName, scope))
+//			loop = false;
+//		else
+//			pBin = pBin->GetNext();
+//	}
+//	return pBin;
+//}
 
 void CBucket::Delete(CBin* pSym)
 {

@@ -3,17 +3,12 @@
 class CBin
 {
 public:
-	enum BinType {
-		LABEL,
-		ZEROPAGELABEL,
-	};
 private:
 	CBin* m_pNext;
 	CBin* m_pPrev;
 	CBin* m_pHead;
 	CBin* m_pTail;
 	char* m_pName;
-	BinType m_Type;
 	char m_strName[MAX_SYMBOL_NAME_LEN];
 public:
 	CBin() {
@@ -22,17 +17,6 @@ public:
 		m_pNext = 0;
 		m_pPrev = 0;
 		m_pName = new char[MAX_NAME_LEN];
-		m_Type = BinType(0);
-		for (int i = 0; i < MAX_SYMBOL_NAME_LEN; ++i)
-			m_strName[i] = 0;
-	}
-	CBin(BinType type) {
-		m_pName = new char[MAX_NAME_LEN];
-		m_pNext = 0;
-		m_pPrev = 0;
-		m_pHead = 0;
-		m_pTail = 0;
-		m_Type = type;
 		for (int i = 0; i < MAX_SYMBOL_NAME_LEN; ++i)
 			m_strName[i] = 0;
 	}
@@ -53,13 +37,11 @@ public:
 		strcpy_s(m_pName, l, pName);
 	}
 	 virtual bool Compare(const char *name, int aux = 0);
-	 BinType GetType() { return m_Type; }
-	 virtual void Print(FILE* pOut, const char* s = 0);
+	 virtual void Print(FILE* pOut) = 0;
 	 //------------------------------------------
 	 // SubList Methods
 	 //------------------------------------------
 	 void Add(CBin* pSym);
-	 CBin* Find(const char* pName, CBin::BinType Type);
 	 void Delete(CBin* pSym);
 	 void Unlink(CBin* pSym);
 	 inline void SetHead(CBin* pH) { m_pHead = pH; }
